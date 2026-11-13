@@ -24,12 +24,22 @@ Quoted responsibilities (short, attributed quotes from the posting text the stud
 
 - **Source:** O*NET OnLine, Management Analysts, 13-1111.00
 - **URL:** https://www.onetonline.org/link/details/13-1111.00
-- **Status:** **PENDING USER REVIEW.** This cross-check was built from the Bain posting text
-  the student provided directly; O*NET's task language was not independently re-fetched in
-  this build session, so it is not quoted here. Before submitting, open the O*NET link above,
-  confirm it lists tasks matching "collect and organize information... analyze data...
-  prepare recommendations... develop solutions," and paste a short attributed quote into this
-  section with the date you checked it. Do not submit this file with the PENDING marker left in.
+- **Date reviewed:** 2026-11-13
+
+Core tasks, as listed on O*NET (in the page's order of importance):
+
+> "Gather and organize information on problems or procedures."
+
+> "Analyze data gathered and develop solutions or alternative methods of proceeding."
+
+> "Document findings of study and prepare recommendations for implementation of new systems, procedures..."
+
+> "Plan study of work problems and procedures, such as organizational change, communications..."
+
+These three — gather/organize information, analyze data and develop solutions, and document
+findings with recommendations — map directly onto the Bain posting's "hypothesis-led thinking
+and rigorous analysis" and "deliver clear, actionable recommendations" language, confirming
+this is a real, recognized occupational task cluster and not just one employer's framing.
 
 ## Task mapping used to scope ConsultAI
 
