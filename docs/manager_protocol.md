@@ -45,6 +45,25 @@ overwrite evidence.
 - **Recovery:** Remove the untrusted instruction text, rerun with a sanitized memo, and document the rerun as a new linked test.
 - **Repeated failure:** Suspend memo-driven AI narrative generation for the case, strengthen input isolation (the system prompt already instructs the model to treat memo content as data-only — see `ai_client.py`), and require an adversarial regression test before re-enabling.
 
+## Role Expansion & Next Steps
+
+With routine diagnosis and briefing prep automated under the controls above, the associate's
+path is to become an **AI-enabled consulting workstream lead** — not simply producing more
+output, but owning analytical quality, issue-prioritization standards, and AI-output review
+across cases (see `ob_analysis.md` for the full argument and named risks).
+
+**Immediate next steps for a real team adopting this:**
+1. **Pilot on 5-10 real cases** with a human recomputing every number independently, to
+   calibrate whether the issue-detection thresholds (e.g., margin decline ≥3pp) actually match
+   what experienced associates consider significant — they are currently reasonable defaults,
+   not validated against a large sample.
+2. **Track the two repeated-failure triggers** (two data-inconsistency failures, two
+   unsupported findings) across real cases for a month to see how often they fire in practice.
+3. **Add reviewer authentication** before any real deployment — this prototype trusts a
+   self-reported name and role; a real rollout needs that tied to an actual login system.
+4. **Review audit logs monthly** to catch failure patterns before they repeat three or four
+   times, not just two — the thresholds here are a starting point, not a final policy.
+
 ## What this protocol does not claim
 
 - Detection is not perfect. The adversarial test in Part 4 is designed to show a real result —

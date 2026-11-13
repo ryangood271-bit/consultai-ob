@@ -288,6 +288,14 @@ def build_assignment_report_pdf() -> bytes:
         "Translates verified evidence into client-relevant options for the manager.",
     ])
     pdf.ln(2)
+    pdf.h2("Next Steps")
+    pdf.bullets([
+        "Pilot on 5-10 real cases with independent manual recomputation, to calibrate the issue-detection thresholds against real associate judgment.",
+        "Track the repeated-failure triggers across real cases for a month to see how often they actually fire.",
+        "Add real reviewer authentication before any real deployment -- this prototype trusts a self-reported role.",
+        "Review audit logs monthly to catch failure patterns early.",
+    ], size=9)
+    pdf.ln(2)
     pdf.h2("7. Conclusion")
     pdf.p(
         "The routine financial/operational diagnosis is automated; the risk protocol is tested "
