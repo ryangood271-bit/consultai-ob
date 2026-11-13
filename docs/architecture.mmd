@@ -1,0 +1,22 @@
+flowchart TD
+    A[Manager assigns case:<br/>company, question, 3 file uploads] --> B[Deterministic validation<br/>Python/pandas — no AI]
+    B -->|Blocking errors| B1[BLOCKED_INPUT<br/>stop, return to Associate for correction]
+    B -->|No blocking errors| C[Python metrics engine<br/>margins, growth, productivity]
+    C --> D[Issue detection + ranking<br/>transparent thresholds + weighted score]
+    D --> E{Explicit consent checkbox<br/>confirmed?}
+    E -->|No| E1[Cannot call external AI]
+    E -->|Yes| F[Anthropic API call<br/>sanitized metrics + candidate issues +<br/>memo labeled UNTRUSTED]
+    F --> G[Claim verification<br/>every AI claim checked against<br/>validated metrics/issue IDs]
+    G --> H[DRAFT_REVIEW_REQUIRED<br/>Associate reviews evidence, citations]
+    H -->|Associate flags problem| H1[RETURNED_FOR_CORRECTION /<br/>REJECTED]
+    H -->|Associate satisfied| I[Manager reviews + is sole<br/>approval authority]
+    I -->|Approve| J[APPROVED_INTERNAL<br/>briefing + audit trail exported]
+    I -->|Reject| K[REJECTED<br/>logged with reason]
+    H1 --> A
+
+    classDef human fill:#fde68a,stroke:#92400e;
+    classDef ai fill:#bfdbfe,stroke:#1e3a8a;
+    classDef gate fill:#fca5a5,stroke:#7f1d1d;
+    class A,H,I human
+    class F ai
+    class B1,E1,H1,K gate

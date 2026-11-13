@@ -1,0 +1,2 @@
+BlueRiver Healthcare Services — Fictional CEO strategy memo
+The executive team requests a diagnostic of why operating profitability has fallen while revenue grows. The goal is to restore operating margin toward 15% without reducing patient access, increasing average wait times, or sacrificing service quality. We prefer testable root-cause hypotheses over premature cost cuts. This is fictional educational data; no actual client is represented.

@@ -1,0 +1,9 @@
+Illustrative classroom memo — student-authored, not an actual HCA Healthcare internal document.
+Uses HCA Healthcare's real, publicly reported 2023-2025 financial results (source: company financial
+filings, as reported on stockanalysis.com) as the basis for a classroom diagnostic exercise.
+
+Objective: HCA's revenue and operating income have both grown strongly over 2023-2025. Analyze
+which cost categories are growing fastest relative to revenue, and whether reported patient-volume
+and staffing trends (illustrative estimates, since real operational KPIs like staff hours and wait
+times are not publicly disclosed) suggest any emerging pressure on efficiency. Do not recommend
+staffing cuts without first identifying a verified root cause.
