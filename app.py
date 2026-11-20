@@ -651,7 +651,7 @@ elif page == "3. Findings & Recommendations":
                 st.session_state.case = case
                 st.rerun()
 
-            if case["ai_status"] == "OK" and case["verified_findings"]:
+            if case["ai_status"] == "OK":
                 raw = case.get("ai_raw_json") or {}
 
                 st.divider()
@@ -660,6 +660,13 @@ elif page == "3. Findings & Recommendations":
                     "Everything below is the AI's draft interpretation of the numbers above — read it "
                     "critically, it's a starting point for a human, not a verified conclusion."
                 )
+
+                if not case["verified_findings"]:
+                    st.success(
+                        "✅ The AI reviewed the validated numbers and didn't flag any findings to "
+                        "report — consistent with the code detecting 0 issues above. This is a "
+                        "genuine 'all clear' result, not an error or a missing response."
+                    )
 
                 if raw.get("why_important"):
                     st.markdown("### 📖 What's going on, in plain terms")
@@ -685,14 +692,15 @@ elif page == "3. Findings & Recommendations":
                     for c in raw["source_conflicts"]:
                         st.write(f"- {c}")
 
-                with st.expander("🔎 The specific data points behind these findings (for fact-checking)"):
-                    for f in case["verified_findings"]:
-                        tag = "✅ confirmed against the real numbers" if f.status == "VERIFIED" else "⚠️ NOT independently confirmed"
-                        st.write(f"**{f.issue_id}** ({tag}): {f.summary}")
-                    if raw.get("limitations"):
-                        st.markdown("**What this analysis can't tell you:**")
-                        for lim in raw["limitations"]:
-                            st.write(f"- {lim}")
+                if case["verified_findings"] or raw.get("limitations"):
+                    with st.expander("🔎 The specific data points behind these findings (for fact-checking)"):
+                        for f in case["verified_findings"]:
+                            tag = "✅ confirmed against the real numbers" if f.status == "VERIFIED" else "⚠️ NOT independently confirmed"
+                            st.write(f"**{f.issue_id}** ({tag}): {f.summary}")
+                        if raw.get("limitations"):
+                            st.markdown("**What this analysis can't tell you:**")
+                            for lim in raw["limitations"]:
+                                st.write(f"- {lim}")
             elif case["ai_status"] not in ("NOT RUN", "OK"):
                 st.warning(f"AI status: {case['ai_status']}")
 
