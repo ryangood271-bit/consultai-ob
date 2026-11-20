@@ -811,13 +811,12 @@ elif page == "5. Risks & Human Review":
         st.caption("Student testing: you may role-play both Associate and Manager, but this must be "
                     "labeled a simulation of roles — no real company sign-off is implied.")
 
-        with st.container(border=True):
-            reviewer_name = st.text_input("Reviewer name", key="review_reviewer_name")
-            rcol1, rcol2 = st.columns(2)
-            reviewer_role = rcol1.selectbox("Reviewer role", ["associate", "manager"], key="review_reviewer_role")
-            decision_type = rcol2.selectbox("Decision", ["approve", "reject", "return_for_correction"], key="review_decision_type")
-            reason = st.text_area("Reason / notes", key="review_reason")
-            submit_clicked = st.button("Submit review decision", type="primary")
+        reviewer_name = st.text_input("Reviewer name", key="review_reviewer_name")
+        rcol1, rcol2 = st.columns(2)
+        reviewer_role = rcol1.selectbox("Reviewer role", ["associate", "manager"], key="review_reviewer_role")
+        decision_type = rcol2.selectbox("Decision", ["approve", "reject", "return_for_correction"], key="review_decision_type")
+        reason = st.text_area("Reason / notes", key="review_reason")
+        submit_clicked = st.button("Submit review decision", type="primary")
 
         if submit_clicked:
             if not reviewer_name or not reason:
