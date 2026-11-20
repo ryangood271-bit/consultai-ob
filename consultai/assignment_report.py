@@ -161,7 +161,7 @@ class ReportPDF(FPDF):
 def build_assignment_report_pdf() -> bytes:
     pdf = ReportPDF()
 
-    # ---- Page 1: Job + Architecture ----
+    # ---- Page 1: Target job ----
     pdf.add_page()
     pdf.h2("1. Target Job")
     pdf.p(
@@ -184,11 +184,13 @@ def build_assignment_report_pdf() -> bytes:
         ],
         col_widths=(85, 95),
     )
-    pdf.ln(3)
+    # ---- Page 2: Architecture diagram (own page -- it's tall, don't let it get orphaned) ----
+    pdf.add_page()
     pdf.h2("2. Automation Architecture")
-    pdf.image(_architecture_diagram_png(), w=140, x=35)
-    pdf.ln(2)
+    pdf.image(_architecture_diagram_png(), w=130, x=40)
 
+    # ---- Page 3: Workflow map (own page -- the table is long) ----
+    pdf.add_page()
     pdf.h2("Workflow Map: Fully / Partially / Not Automated")
     pdf.simple_table(
         ["Job workflow step", "Status", "Notes"],
@@ -206,7 +208,7 @@ def build_assignment_report_pdf() -> bytes:
         col_widths=(55, 45, 90),
     )
 
-    # ---- Page 2: boundaries + protocol ----
+    # ---- Page 4: boundaries + protocol ----
     pdf.add_page()
     pdf.h2("Automation Boundaries")
     pdf.simple_table(
@@ -247,7 +249,7 @@ def build_assignment_report_pdf() -> bytes:
         col_widths=(110, 70),
     )
 
-    # ---- Page 3: Real test evidence ----
+    # ---- Page 5: Real test evidence ----
     pdf.add_page()
     pdf.h2("4. Operational Test Evidence (real runs, this session)")
     pdf.p("Everything below actually happened. These are real calls to Claude's API running against my actual code, with real output, not numbers I made up to look good.", size=8.8)
@@ -281,7 +283,7 @@ def build_assignment_report_pdf() -> bytes:
         "One honest limitation I found doing this: the system takes your word for who you are. If you type 'manager' in the reviewer-role field, it believes you -- there's no real login behind it.",
     ], size=9)
 
-    # ---- Page 4: OB impact ----
+    # ---- Page 6: OB impact ----
     pdf.add_page()
     pdf.h2("5. Organizational Impact")
     pdf.simple_table(
