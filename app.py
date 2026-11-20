@@ -436,17 +436,16 @@ if page == "1. Case Setup":
 
     if case is not None:
         vr = case["validation_result"]
-        if vr.issues:
-            st.subheader("Validation results")
-            for i in vr.blocking:
-                st.error(f"BLOCKING [{i.code}] {i.file}" + (f" row {i.row}" if i.row else "") + f": {i.message}" +
-                         (f" (expected {i.expected}, observed {i.observed})" if i.expected else ""))
-            for i in vr.warnings:
-                st.warning(f"WARNING [{i.code}] {i.file}: {i.message}")
-            if not vr.is_blocked:
-                st.success("No blocking errors. Calculations are ready — see Analysis Dashboard.")
-        else:
-            st.info("No case run yet.")
+        st.subheader("Validation results")
+        for i in vr.blocking:
+            st.error(f"BLOCKING [{i.code}] {i.file}" + (f" row {i.row}" if i.row else "") + f": {i.message}" +
+                     (f" (expected {i.expected}, observed {i.observed})" if i.expected else ""))
+        for i in vr.warnings:
+            st.warning(f"WARNING [{i.code}] {i.file}: {i.message}")
+        if not vr.is_blocked:
+            st.success("✅ No blocking errors. Calculations are ready — see Analysis Dashboard.")
+    else:
+        st.info("No case run yet.")
 
 # ---------------------------------------------------------------------------
 # PAGE 2 — ANALYSIS DASHBOARD
@@ -771,10 +770,10 @@ elif page == "5. Risks & Human Review":
         st.caption("Student testing: you may role-play both Associate and Manager, but this must be "
                     "labeled a simulation of roles — no real company sign-off is implied.")
 
-        reviewer_name = st.text_input("Reviewer name")
-        reviewer_role = st.selectbox("Reviewer role", ["associate", "manager"])
-        decision_type = st.selectbox("Decision", ["approve", "reject", "return_for_correction"])
-        reason = st.text_area("Reason / notes")
+        reviewer_name = st.text_input("Reviewer name", key="review_reviewer_name")
+        reviewer_role = st.selectbox("Reviewer role", ["associate", "manager"], key="review_reviewer_role")
+        decision_type = st.selectbox("Decision", ["approve", "reject", "return_for_correction"], key="review_decision_type")
+        reason = st.text_area("Reason / notes", key="review_reason")
 
         if st.button("Submit review decision", type="primary"):
             if not reviewer_name or not reason:
