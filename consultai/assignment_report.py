@@ -189,6 +189,23 @@ def build_assignment_report_pdf() -> bytes:
     pdf.image(_architecture_diagram_png(), w=140, x=35)
     pdf.ln(2)
 
+    pdf.h2("Workflow Map: Fully / Partially / Not Automated")
+    pdf.simple_table(
+        ["Job workflow step", "Status", "Notes"],
+        [
+            ["Receive financial data", "Fully automated", "Upload, paste, or link + AI extraction + validation"],
+            ["Calculate margins, growth, cost ratios", "Fully automated", "Deterministic Python, unit-tested"],
+            ["Detect & rank business issues", "Fully automated", "Transparent thresholds + weighted scoring"],
+            ["Draft hypotheses & interpretation", "Partially automated", "AI drafts; every claim checked against real data"],
+            ["Draft strategic recommendations", "Partially automated", "AI drafts options; manager decides, nothing is final"],
+            ["Draft client-facing summary", "Partially automated", "AI drafts; human must review and actually send it"],
+            ["Approve / release internally", "Not automated (by design)", "Requires a named human with manager authority"],
+            ["Client relationship & conversation", "Not automated", "Outside this prototype's scope; needs human judgment"],
+            ["Broader market/competitive research", "Not automated", "Outside this prototype's scope"],
+        ],
+        col_widths=(55, 45, 90),
+    )
+
     # ---- Page 2: boundaries + protocol ----
     pdf.add_page()
     pdf.h2("Automation Boundaries")
