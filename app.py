@@ -567,117 +567,134 @@ elif page == "3. Findings & Recommendations":
     if case is None or case["candidate_issues"] is None:
         st.info("Run a case with no blocking errors on the Case Setup page first.")
     else:
-        st.subheader("Code-detected candidate issues (ranked)")
-        st.caption("Scoring: impact 50% + evidence strength 30% + relevance to stated goal 20%, each sub-score 1-5.")
         top3 = issue_detection.top_n(case["candidate_issues"], 3)
-        for issue in top3:
-            with st.expander(f"{issue.title}  —  score {issue.weighted_score:.2f}/5  [{issue.label}]"):
-                st.write(issue.description)
-                st.write("Evidence:")
-                for ev in issue.evidence:
-                    st.code(f"{ev.file} / {ev.year} / {ev.column} = {ev.value}")
-                st.write(f"impact={issue.impact_score} evidence={issue.evidence_score} relevance={issue.relevance_score}")
 
-        if not top3:
-            st.info("No candidate issues crossed the detection thresholds for this dataset.")
-
-        st.divider()
-        st.subheader("Generate AI insight draft")
-        st.caption(
-            "Sends the validated metrics summary, the candidate issues above, and the memo "
-            "text (labeled untrusted) to the configured Anthropic model. Requires ANTHROPIC_API_KEY."
-        )
-        sanitized_preview = {
-            "management_question": case["question"],
-            "validated_metrics_summary": case["period_summary"],
-            "candidate_issues": [i.issue_id for i in top3],
-            "memo_excerpt_chars_sent": len(case["memo_text"] or ""),
-        }
-        with st.expander("Preview of sanitized content that would be sent"):
-            st.json(sanitized_preview)
-
-        if st.button("Call Anthropic API now", type="primary"):
-            payload_issues = [
-                {
-                    "issue_id": i.issue_id,
-                    "title": i.title,
-                    "description": i.description,
-                    "evidence": [vars(e) for e in i.evidence],
-                }
-                for i in top3
-            ]
-            try:
-                result = ai_client.generate_briefing(
-                    metrics_summary=case["period_summary"],
-                    candidate_issues_payload=payload_issues,
-                    memo_excerpt=case["memo_text"] or "",
-                    management_question=case["question"],
-                )
-                case["ai_status"] = "OK"
-                case["ai_model"] = result.model
-                case["ai_raw_json"] = result.raw_json
-                verified = claim_verification.verify_findings(result.top_findings, case["candidate_issues"])
-                case["verified_findings"] = verified
-                case["run"].mark_ai_draft_ready()
-                audit.append_event(case["run_dir"], "AI_CALL_SUCCESS", {"model": result.model, "raw_response": result.raw_json})
-                st.success(f"AI draft generated using model `{result.model}`.")
-            except ai_client.NoAPIKeyError as e:
-                case["ai_status"] = "NO AI GENERATED — ANTHROPIC_API_KEY not set"
-                case["ai_error"] = str(e)
-                audit.append_event(case["run_dir"], "AI_CALL_NO_KEY", {"error": str(e)})
-                st.error(str(e))
-            except (ai_client.AIResponseSchemaError, ai_client.AICallError) as e:
-                case["ai_status"] = f"NO AI GENERATED — {e}"
-                case["ai_error"] = str(e)
-                audit.append_event(case["run_dir"], "AI_CALL_FAILED", {"error": str(e)})
-                st.error(f"AI call failed, no content was fabricated: {e}")
-            st.session_state.case = case
-            st.rerun()
-
-        if case["ai_status"] == "OK" and case["verified_findings"]:
-            raw = case.get("ai_raw_json") or {}
-
-            st.divider()
-            st.header("💡 Bottom line: what this means and what to do")
-            st.caption(
-                "Everything below is the AI's draft interpretation of the numbers above — read it "
-                "critically, it's a starting point for a human, not a verified conclusion."
+        if top3:
+            st.markdown(
+                f"""
+                <div style="background: linear-gradient(120deg, #4338CA, #06B6D4); border-radius: 14px;
+                            padding: 1rem 1.3rem; color: white; margin-bottom: 1rem;">
+                    <div style="font-size: 0.78rem; opacity: 0.85; letter-spacing: 0.04em; text-transform: uppercase;">Top issue</div>
+                    <div style="font-size: 1.25rem; font-weight: 700; margin-top: 2px;">{top3[0].title}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.9; margin-top: 4px;">Score {top3[0].weighted_score:.2f}/5 — {len(top3)} issue(s) found overall</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
+        else:
+            st.success("No candidate issues crossed the detection thresholds for this dataset — the numbers look clean.")
 
-            if raw.get("why_important"):
-                st.markdown("### 📖 What's going on, in plain terms")
-                st.write(raw["why_important"])
+        tab_issues, tab_ai = st.tabs(["🔍 Detected Issues", "💡 AI Analysis & Recommendations"])
 
-            if raw.get("hypotheses"):
-                st.markdown("### 🤔 Possible reasons why (unconfirmed — just theories to test)")
-                for h in raw["hypotheses"]:
-                    st.write(f"- {h}")
+        with tab_issues:
+            st.caption("Scoring: impact 50% + evidence strength 30% + relevance to stated goal 20%, each sub-score 1-5.")
+            for issue in top3:
+                with st.expander(f"{issue.title}  —  score {issue.weighted_score:.2f}/5  [{issue.label}]"):
+                    st.write(issue.description)
+                    st.write("Evidence:")
+                    for ev in issue.evidence:
+                        st.code(f"{ev.file} / {ev.year} / {ev.column} = {ev.value}")
+                    st.write(f"impact={issue.impact_score} evidence={issue.evidence_score} relevance={issue.relevance_score}")
+            if not top3:
+                st.info("Nothing to show here — see the message above.")
 
-            if raw.get("proposed_investigations"):
-                st.markdown("### ⚠️ Things worth worrying about / checking before you act")
-                for inv in raw["proposed_investigations"]:
-                    st.write(f"- {inv}")
+        with tab_ai:
+            st.subheader("Generate AI insight draft")
+            st.caption(
+                "Sends the validated metrics summary, the candidate issues above, and the memo "
+                "text (labeled untrusted) to the configured Anthropic model. Requires ANTHROPIC_API_KEY."
+            )
+            sanitized_preview = {
+                "management_question": case["question"],
+                "validated_metrics_summary": case["period_summary"],
+                "candidate_issues": [i.issue_id for i in top3],
+                "memo_excerpt_chars_sent": len(case["memo_text"] or ""),
+            }
+            with st.expander("Preview of sanitized content that would be sent"):
+                st.json(sanitized_preview)
 
-            if raw.get("strategic_options"):
-                st.markdown("### ✅ Recommendations to consider (a manager still has to sign off)")
-                for opt in raw["strategic_options"]:
-                    st.write(f"- {opt}")
+            if st.button("Call Anthropic API now", type="primary"):
+                payload_issues = [
+                    {
+                        "issue_id": i.issue_id,
+                        "title": i.title,
+                        "description": i.description,
+                        "evidence": [vars(e) for e in i.evidence],
+                    }
+                    for i in top3
+                ]
+                try:
+                    result = ai_client.generate_briefing(
+                        metrics_summary=case["period_summary"],
+                        candidate_issues_payload=payload_issues,
+                        memo_excerpt=case["memo_text"] or "",
+                        management_question=case["question"],
+                    )
+                    case["ai_status"] = "OK"
+                    case["ai_model"] = result.model
+                    case["ai_raw_json"] = result.raw_json
+                    verified = claim_verification.verify_findings(result.top_findings, case["candidate_issues"])
+                    case["verified_findings"] = verified
+                    case["run"].mark_ai_draft_ready()
+                    audit.append_event(case["run_dir"], "AI_CALL_SUCCESS", {"model": result.model, "raw_response": result.raw_json})
+                    st.success(f"AI draft generated using model `{result.model}`.")
+                except ai_client.NoAPIKeyError as e:
+                    case["ai_status"] = "NO AI GENERATED — ANTHROPIC_API_KEY not set"
+                    case["ai_error"] = str(e)
+                    audit.append_event(case["run_dir"], "AI_CALL_NO_KEY", {"error": str(e)})
+                    st.error(str(e))
+                except (ai_client.AIResponseSchemaError, ai_client.AICallError) as e:
+                    case["ai_status"] = f"NO AI GENERATED — {e}"
+                    case["ai_error"] = str(e)
+                    audit.append_event(case["run_dir"], "AI_CALL_FAILED", {"error": str(e)})
+                    st.error(f"AI call failed, no content was fabricated: {e}")
+                st.session_state.case = case
+                st.rerun()
 
-            if raw.get("source_conflicts"):
-                st.markdown("### 🚩 Conflicting or suspicious information the AI noticed")
-                for c in raw["source_conflicts"]:
-                    st.write(f"- {c}")
+            if case["ai_status"] == "OK" and case["verified_findings"]:
+                raw = case.get("ai_raw_json") or {}
 
-            with st.expander("🔎 The specific data points behind these findings (for fact-checking)"):
-                for f in case["verified_findings"]:
-                    tag = "✅ confirmed against the real numbers" if f.status == "VERIFIED" else "⚠️ NOT independently confirmed"
-                    st.write(f"**{f.issue_id}** ({tag}): {f.summary}")
-                if raw.get("limitations"):
-                    st.markdown("**What this analysis can't tell you:**")
-                    for lim in raw["limitations"]:
-                        st.write(f"- {lim}")
-        elif case["ai_status"] not in ("NOT RUN", "OK"):
-            st.warning(f"AI status: {case['ai_status']}")
+                st.divider()
+                st.header("💡 Bottom line: what this means and what to do")
+                st.caption(
+                    "Everything below is the AI's draft interpretation of the numbers above — read it "
+                    "critically, it's a starting point for a human, not a verified conclusion."
+                )
+
+                if raw.get("why_important"):
+                    st.markdown("### 📖 What's going on, in plain terms")
+                    st.write(raw["why_important"])
+
+                if raw.get("hypotheses"):
+                    st.markdown("### 🤔 Possible reasons why (unconfirmed — just theories to test)")
+                    for h in raw["hypotheses"]:
+                        st.write(f"- {h}")
+
+                if raw.get("proposed_investigations"):
+                    st.markdown("### ⚠️ Things worth worrying about / checking before you act")
+                    for inv in raw["proposed_investigations"]:
+                        st.write(f"- {inv}")
+
+                if raw.get("strategic_options"):
+                    st.markdown("### ✅ Recommendations to consider (a manager still has to sign off)")
+                    for opt in raw["strategic_options"]:
+                        st.write(f"- {opt}")
+
+                if raw.get("source_conflicts"):
+                    st.markdown("### 🚩 Conflicting or suspicious information the AI noticed")
+                    for c in raw["source_conflicts"]:
+                        st.write(f"- {c}")
+
+                with st.expander("🔎 The specific data points behind these findings (for fact-checking)"):
+                    for f in case["verified_findings"]:
+                        tag = "✅ confirmed against the real numbers" if f.status == "VERIFIED" else "⚠️ NOT independently confirmed"
+                        st.write(f"**{f.issue_id}** ({tag}): {f.summary}")
+                    if raw.get("limitations"):
+                        st.markdown("**What this analysis can't tell you:**")
+                        for lim in raw["limitations"]:
+                            st.write(f"- {lim}")
+            elif case["ai_status"] not in ("NOT RUN", "OK"):
+                st.warning(f"AI status: {case['ai_status']}")
 
 # ---------------------------------------------------------------------------
 # PAGE 4 — SCENARIO SIMULATOR
@@ -744,38 +761,57 @@ elif page == "5. Risks & Human Review":
     else:
         run: Run = case["run"]
         vr = case["validation_result"]
+        unverified_count = sum(1 for f in (case["verified_findings"] or []) if f.status == "NEEDS HUMAN VERIFICATION")
 
-        st.subheader("Blocking errors (must be corrected before any approval)")
+        def status_card(label, count, ok_text, bad_text):
+            ok = count == 0
+            bg = "#ECFDF5" if ok else "#FEF2F2"
+            border = "#10B981" if ok else "#EF4444"
+            icon = "✅" if ok else "⚠️"
+            text = ok_text if ok else f"{count} {bad_text}"
+            return f"""
+            <div style="background:{bg}; border:1.5px solid {border}; border-radius:12px;
+                        padding:0.9rem 1rem; text-align:center;">
+                <div style="font-size:1.6rem;">{icon}</div>
+                <div style="font-weight:700; font-size:0.95rem; margin-top:2px;">{label}</div>
+                <div style="font-size:0.8rem; color:#475569; margin-top:2px;">{text}</div>
+            </div>
+            """
+
+        c1, c2, c3 = st.columns(3)
+        c1.markdown(status_card("Blocking Errors", len(vr.blocking), "None found", "blocking error(s)"), unsafe_allow_html=True)
+        c2.markdown(status_card("Warnings", len(vr.warnings), "None found", "warning(s)"), unsafe_allow_html=True)
+        c3.markdown(status_card("Unverified AI Claims", unverified_count, "All verified", "need review"), unsafe_allow_html=True)
+
+        st.write("")
         if vr.blocking:
-            for i in vr.blocking:
-                st.error(f"[{i.code}] {i.message}")
-        else:
-            st.success("None.")
-
-        st.subheader("Warnings (human attention, not auto-blocking)")
+            with st.expander("See blocking error details", expanded=True):
+                for i in vr.blocking:
+                    st.error(f"[{i.code}] {i.message}")
         if vr.warnings:
-            for i in vr.warnings:
-                st.warning(f"[{i.code}] {i.message}")
-        else:
-            st.write("None.")
-
-        if case["verified_findings"]:
-            st.subheader("AI claim verification")
-            for f in case["verified_findings"]:
-                if f.status == "NEEDS HUMAN VERIFICATION":
-                    st.warning(f"`{f.issue_id}`: {f.reason}")
+            with st.expander("See warning details"):
+                for i in vr.warnings:
+                    st.warning(f"[{i.code}] {i.message}")
+        if unverified_count:
+            with st.expander("See unverified AI claims", expanded=True):
+                for f in case["verified_findings"]:
+                    if f.status == "NEEDS HUMAN VERIFICATION":
+                        st.warning(f"`{f.issue_id}`: {f.reason}")
 
         st.divider()
-        st.subheader("Reviewer decision")
+        st.markdown("### 📝 Reviewer Decision")
         st.caption("Student testing: you may role-play both Associate and Manager, but this must be "
                     "labeled a simulation of roles — no real company sign-off is implied.")
 
-        reviewer_name = st.text_input("Reviewer name", key="review_reviewer_name")
-        reviewer_role = st.selectbox("Reviewer role", ["associate", "manager"], key="review_reviewer_role")
-        decision_type = st.selectbox("Decision", ["approve", "reject", "return_for_correction"], key="review_decision_type")
-        reason = st.text_area("Reason / notes", key="review_reason")
+        with st.container(border=True):
+            reviewer_name = st.text_input("Reviewer name", key="review_reviewer_name")
+            rcol1, rcol2 = st.columns(2)
+            reviewer_role = rcol1.selectbox("Reviewer role", ["associate", "manager"], key="review_reviewer_role")
+            decision_type = rcol2.selectbox("Decision", ["approve", "reject", "return_for_correction"], key="review_decision_type")
+            reason = st.text_area("Reason / notes", key="review_reason")
+            submit_clicked = st.button("Submit review decision", type="primary")
 
-        if st.button("Submit review decision", type="primary"):
+        if submit_clicked:
             if not reviewer_name or not reason:
                 st.error("Reviewer name and reason are required.")
             else:
@@ -811,85 +847,89 @@ elif page == "6. Briefing & Audit Trail":
         st.markdown(f"## {rating['emoji']} Overall trend: {rating['label']}")
         st.markdown(rating_gauge_html(rating["points"]), unsafe_allow_html=True)
         st.caption(f"This is {rating['why']}")
-        st.divider()
 
-        briefing_md = reports.render_briefing(
-            run=case["run"],
-            company_name=case["company_name"],
-            management_question=case["question"],
-            metrics=case["year_metrics"],
-            period_summary=case["period_summary"],
-            verified_findings=case["verified_findings"] or [],
-            scenario_result=case["scenario_result"],
-            ai_model=case["ai_model"],
-            ai_status=case["ai_status"],
-            ai_raw_json=case.get("ai_raw_json"),
-        )
-        st.markdown(briefing_md)
+        tab_briefing, tab_email, tab_audit = st.tabs(["📋 Briefing", "✉️ Client Email", "🗂️ Audit Log"])
 
-        pdf_bytes = pdf_report.build_pdf_report(
-            run=case["run"],
-            company_name=case["company_name"],
-            management_question=case["question"],
-            metrics=case["year_metrics"],
-            period_summary=case["period_summary"],
-            verified_findings=case["verified_findings"] or [],
-            ai_raw_json=case.get("ai_raw_json"),
-            ai_model=case["ai_model"],
-            ai_status=case["ai_status"],
-            plain_english_overview=reports.plain_english_overview(case["year_metrics"], case["period_summary"]),
-        )
-        pdf_filename = pdf_report.build_filename(case["company_name"], case["run_id"])
-
-        dl_col1, dl_col2 = st.columns(2)
-        dl_col1.download_button("📄 Download as PDF", pdf_bytes,
-                                 file_name=pdf_filename, mime="application/pdf", type="primary")
-        dl_col2.download_button("Download as Markdown", briefing_md, file_name=f"briefing_{case['run_id']}.md")
-
-        st.divider()
-        st.subheader("✉️ Draft a client-facing summary (optional)")
-        if case["run"].state != RunState.APPROVED_INTERNAL:
-            st.info(
-                "Locked until this run is APPROVED_INTERNAL — a manager has to sign off on the "
-                "internal findings before any client-facing language gets drafted."
+        with tab_briefing:
+            briefing_md = reports.render_briefing(
+                run=case["run"],
+                company_name=case["company_name"],
+                management_question=case["question"],
+                metrics=case["year_metrics"],
+                period_summary=case["period_summary"],
+                verified_findings=case["verified_findings"] or [],
+                scenario_result=case["scenario_result"],
+                ai_model=case["ai_model"],
+                ai_status=case["ai_status"],
+                ai_raw_json=case.get("ai_raw_json"),
             )
-        else:
+
+            pdf_bytes = pdf_report.build_pdf_report(
+                run=case["run"],
+                company_name=case["company_name"],
+                management_question=case["question"],
+                metrics=case["year_metrics"],
+                period_summary=case["period_summary"],
+                verified_findings=case["verified_findings"] or [],
+                ai_raw_json=case.get("ai_raw_json"),
+                ai_model=case["ai_model"],
+                ai_status=case["ai_status"],
+                plain_english_overview=reports.plain_english_overview(case["year_metrics"], case["period_summary"]),
+            )
+            pdf_filename = pdf_report.build_filename(case["company_name"], case["run_id"])
+
+            dl_col1, dl_col2 = st.columns(2)
+            dl_col1.download_button("📄 Download as PDF", pdf_bytes,
+                                     file_name=pdf_filename, mime="application/pdf", type="primary")
+            dl_col2.download_button("Download as Markdown", briefing_md, file_name=f"briefing_{case['run_id']}.md")
+
+            st.divider()
+            with st.expander("Full briefing text", expanded=True):
+                st.markdown(briefing_md)
+
+        with tab_email:
             st.caption(
                 "This is the 'communicating with people' step — but it only ever produces a "
                 "DRAFT using the already-verified findings. There is no send capability "
                 "anywhere in this app; you copy this into your own email client and decide "
                 "whether to send it."
             )
-            if st.button("Draft client email"):
-                try:
-                    draft = client_communication.draft_client_email(
-                        case["company_name"], case["question"], case["verified_findings"] or []
-                    )
-                    st.session_state["client_draft"] = draft
-                    audit.append_event(case["run_dir"], "CLIENT_DRAFT_GENERATED", {
-                        "model": draft.model, "source_findings": draft.source_findings,
-                    })
-                except ai_client.NoAPIKeyError as e:
-                    st.error(str(e))
-                except (client_communication.DraftSchemaError, ai_client.AICallError) as e:
-                    st.error(f"Draft failed, nothing was fabricated: {e}")
+            if case["run"].state != RunState.APPROVED_INTERNAL:
+                st.info(
+                    "Locked until this run is APPROVED_INTERNAL — a manager has to sign off on the "
+                    "internal findings (Risks & Human Review page) before any client-facing "
+                    "language gets drafted."
+                )
+            else:
+                if st.button("Draft client email", type="primary"):
+                    try:
+                        draft = client_communication.draft_client_email(
+                            case["company_name"], case["question"], case["verified_findings"] or []
+                        )
+                        st.session_state["client_draft"] = draft
+                        audit.append_event(case["run_dir"], "CLIENT_DRAFT_GENERATED", {
+                            "model": draft.model, "source_findings": draft.source_findings,
+                        })
+                    except ai_client.NoAPIKeyError as e:
+                        st.error(str(e))
+                    except (client_communication.DraftSchemaError, ai_client.AICallError) as e:
+                        st.error(f"Draft failed, nothing was fabricated: {e}")
 
-            if st.session_state.get("client_draft"):
-                draft = st.session_state["client_draft"]
-                st.warning("DRAFT ONLY — not sent. Review before using anywhere.")
-                st.text_input("Subject", value=draft.subject, key="client_draft_subject")
-                st.text_area("Body", value=draft.body, height=180, key="client_draft_body")
-                st.caption(f"Drafted with {draft.model}, from verified findings only: {draft.source_findings}")
+                if st.session_state.get("client_draft"):
+                    draft = st.session_state["client_draft"]
+                    st.warning("DRAFT ONLY — not sent. Review before using anywhere.")
+                    st.text_input("Subject", value=draft.subject, key="client_draft_subject")
+                    st.text_area("Body", value=draft.body, height=180, key="client_draft_body")
+                    st.caption(f"Drafted with {draft.model}, from verified findings only: {draft.source_findings}")
 
-        st.divider()
-        st.subheader("Audit log")
-        events = audit.load_events(case["run_dir"])
-        st.dataframe(pd.DataFrame(events)) if events else st.write("No events yet.")
-        if st.button("Export test log"):
-            dest = Path(case["run_dir"]) / "test_log_export.md"
-            content = audit.export_test_log(case["run_dir"], str(dest))
-            st.success(f"Exported to {dest}")
-            st.download_button("Download test log", content, file_name="test_log_export.md")
+        with tab_audit:
+            events = audit.load_events(case["run_dir"])
+            st.dataframe(pd.DataFrame(events)) if events else st.write("No events yet.")
+            if st.button("Export test log"):
+                dest = Path(case["run_dir"]) / "test_log_export.md"
+                content = audit.export_test_log(case["run_dir"], str(dest))
+                st.success(f"Exported to {dest}")
+                st.download_button("Download test log", content, file_name="test_log_export.md")
 
 st.sidebar.divider()
 if case is not None:
