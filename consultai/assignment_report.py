@@ -147,6 +147,7 @@ class ReportPDF(FPDF):
             self.multi_cell(self.epw, 4.8, f"-  {_ascii_safe(item)}")
 
     def simple_table(self, headers: list[str], rows: list[list[str]], col_widths: tuple, size: int = 8.3):
+        self.set_font("Helvetica", "", size)
         style = FontFace(emphasis="BOLD", size_pt=size, fill_color=(219, 234, 254))
         with super(ReportPDF, self).table(col_widths=col_widths, text_align="LEFT", headings_style=style, line_height=5.2) as t:
             r = t.row()
@@ -156,6 +157,25 @@ class ReportPDF(FPDF):
                 r = t.row()
                 for v in row:
                     r.cell(_ascii_safe(v))
+
+    def status_table(self, headers: list[str], rows: list[list[str]], col_widths: tuple,
+                      status_col: int, color_map: dict, size: int = 8.3):
+        """Like simple_table, but shades one column's cells by matching a substring in
+        color_map against that cell's text -- e.g. green/amber/red for automation status."""
+        self.set_font("Helvetica", "", size)
+        style = FontFace(emphasis="BOLD", size_pt=size, fill_color=(219, 234, 254))
+        with super(ReportPDF, self).table(col_widths=col_widths, text_align="LEFT", headings_style=style, line_height=5.2) as t:
+            r = t.row()
+            for h in headers:
+                r.cell(_ascii_safe(h))
+            for row in rows:
+                r = t.row()
+                for idx, v in enumerate(row):
+                    if idx == status_col:
+                        fill = next((c for key, c in color_map.items() if key in v), None)
+                        r.cell(_ascii_safe(v), style=FontFace(fill_color=fill) if fill else None)
+                    else:
+                        r.cell(_ascii_safe(v))
 
 
 def build_assignment_report_pdf() -> bytes:
@@ -192,7 +212,9 @@ def build_assignment_report_pdf() -> bytes:
     # ---- Page 3: Workflow map (own page -- the table is long) ----
     pdf.add_page()
     pdf.h2("Workflow Map: Fully / Partially / Not Automated")
-    pdf.simple_table(
+    pdf.p("Color shows how much of each step the system handles on its own.", size=8.5)
+    pdf.ln(1)
+    pdf.status_table(
         ["Job workflow step", "Status", "Notes"],
         [
             ["Receive financial data", "Fully automated", "Upload, paste, or link + AI extraction + validation"],
@@ -206,6 +228,12 @@ def build_assignment_report_pdf() -> bytes:
             ["Broader market/competitive research", "Not automated", "Outside this prototype's scope"],
         ],
         col_widths=(55, 45, 90),
+        status_col=1,
+        color_map={
+            "Fully automated": (209, 250, 229),
+            "Partially automated": (254, 243, 199),
+            "Not automated": (254, 226, 226),
+        },
     )
 
     # ---- Page 4: boundaries + protocol ----
@@ -283,51 +311,37 @@ def build_assignment_report_pdf() -> bytes:
         "One honest limitation I found doing this: the system takes your word for who you are. If you type 'manager' in the reviewer-role field, it believes you -- there's no real login behind it.",
     ], size=9)
 
-    # ---- Page 6: OB impact ----
+    # ---- Page 6: Conclusion ----
     pdf.add_page()
-    pdf.h2("5. Organizational Impact")
-    pdf.simple_table(
-        ["Dimension", "Impact"],
-        [
-            ["Culture", "More evidence-based, but risks automation bias & junior skill atrophy"],
-            ["Communication", "Standardized, cited findings; less informal back-and-forth"],
-            ["Structure", "Associate shifts to owning AI-output quality; manager keeps approval + QC"],
-            ["Coordination", "Run IDs + audit trail make handoffs traceable"],
-            ["Workflow", "Manual research/calc/draft -> validation -> AI draft -> human verification"],
-            ["Decision rights", "System drafts; associate checks; manager authorizes; client contact stays human"],
-        ],
-        col_widths=(40, 140),
+    pdf.h2("5. Conclusion")
+
+    box_x = pdf.l_margin
+    box_y = pdf.get_y()
+    box_w = pdf.epw
+    box_h = 27
+    pdf.set_fill_color(239, 246, 255)
+    pdf.set_draw_color(191, 219, 254)
+    pdf.rect(box_x, box_y, box_w, box_h, style="DF")
+    pdf.set_xy(box_x + 5, box_y + 4)
+    pdf.set_font("Helvetica", "B", 9.5)
+    pdf.set_text_color(*NAVY)
+    pdf.cell(0, 5, "Where this leaves the job", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_x(box_x + 5)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(30, 41, 59)
+    pdf.multi_cell(
+        box_w - 10, 4.6,
+        _ascii_safe(
+            "I automated the routine financial diagnosis work and tested a real failure "
+            "protocol against real adversarial input -- a bad number, a prompt-injection "
+            "attempt -- not just described one on paper. What that means for culture, "
+            "structure, decision rights, and my own next career step is covered in my "
+            "separate written reflection, as the assignment asks for."
+        ),
     )
-    pdf.ln(3)
-    pdf.h2('6. The Higher-Value Role (not "I will do more work")')
-    pdf.p(
-        "My professor's instructions are clear that 'I will do more work' isn't a real answer "
-        "here, so here's what I'd actually move toward: an AI-enabled consulting workstream "
-        "lead. That means I'd:"
-    )
-    pdf.bullets([
-        "Own how good the analysis is and how issues get prioritized across cases, not just this one.",
-        "Build and keep improving the validation logic other associates end up using.",
-        "Teach newer analysts not to just trust whatever the AI says.",
-        "Turn verified findings into options the manager can actually act on.",
-    ])
-    pdf.ln(2)
-    pdf.h2("Next Steps")
-    pdf.bullets([
-        "Run this on 5-10 real cases and manually recompute everything myself, to see if my thresholds (like a 3-point margin drop) actually match what an experienced associate would flag.",
-        "Track how often the repeated-failure rules actually trigger over a month of real use.",
-        "Add real login/authentication before this ever touches a real team -- right now it just trusts whatever role you type in.",
-        "Check the audit logs regularly instead of waiting for a failure to repeat three or four times.",
-    ], size=9)
-    pdf.ln(2)
-    pdf.h2("7. Conclusion")
-    pdf.p(
-        "I automated the routine financial diagnosis work, I built and actually tested a risk "
-        "protocol against real adversarial inputs instead of just writing about what should "
-        "happen in theory, and I can now spend my time checking the AI's work and thinking "
-        "about strategy instead of recalculating margins by hand."
-    )
-    pdf.ln(2)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_y(box_y + box_h + 5)
+
     pdf.set_font("Helvetica", "I", 8.5)
     pdf.set_x(pdf.l_margin)
     pdf.multi_cell(pdf.epw, 4.5,
