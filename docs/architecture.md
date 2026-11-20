@@ -30,6 +30,9 @@ files (financial performance, operations, CEO/manager memo).
 6. Associate review — checks evidence and citations.
 7. Manager review — sole approval authority.
 8. Export — briefing + audit trail (internal only).
+9. Optional, only unlocked after step 7's approval — AI drafts a client-facing summary email
+   from the verified findings only. The system never sends it; a human copies and sends it
+   themselves.
 
 ## Decision owner
 The **consulting manager** is the named decision owner: they initiate the case, approve data
@@ -44,4 +47,5 @@ distribution. The **associate** validates calculations, reviews AI output, and c
 | All arithmetic (margins, growth, scenarios) | Causal interpretation of findings | Approve its own output |
 | Issue flagging + priority ranking | Strategic recommendations | Overwrite or hide original evidence |
 | Draft text generation (clearly marked DRAFT) | Any release/approval decision | Fabricate numbers or sources |
+| Client email draft (post-approval, verified findings only) | Deciding whether to actually send it | Send anything to a client directly |
 | Audit logging | Data correction / exceptions | Access confidential firm systems |

@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from consultai import ai_client, audit, claim_verification, ingest, issue_detection, metrics as metrics_mod
+from consultai import ai_client, audit, claim_verification, client_communication, ingest, issue_detection, metrics as metrics_mod
 from consultai import pdf_report, reports, scenarios, statement_parser, url_fetch, validation
 from consultai.review import IllegalTransitionError, ReviewDecision, Run
 from consultai.schemas import ALLOWED_MEMO_EXTENSIONS, RunState, ValidationResult
@@ -241,6 +241,7 @@ if st.sidebar.button("Reset / New Case"):
     st.session_state.case_finance_draft = None
     st.session_state.case_finance_notes = []
     st.session_state.case_finance_company = None
+    st.session_state.client_draft = None
     st.rerun()
 
 if case is not None:
@@ -845,6 +846,41 @@ elif page == "6. Briefing & Audit Trail":
         dl_col1.download_button("📄 Download as PDF", pdf_bytes,
                                  file_name=pdf_filename, mime="application/pdf", type="primary")
         dl_col2.download_button("Download as Markdown", briefing_md, file_name=f"briefing_{case['run_id']}.md")
+
+        st.divider()
+        st.subheader("✉️ Draft a client-facing summary (optional)")
+        if case["run"].state != RunState.APPROVED_INTERNAL:
+            st.info(
+                "Locked until this run is APPROVED_INTERNAL — a manager has to sign off on the "
+                "internal findings before any client-facing language gets drafted."
+            )
+        else:
+            st.caption(
+                "This is the 'communicating with people' step — but it only ever produces a "
+                "DRAFT using the already-verified findings. There is no send capability "
+                "anywhere in this app; you copy this into your own email client and decide "
+                "whether to send it."
+            )
+            if st.button("Draft client email"):
+                try:
+                    draft = client_communication.draft_client_email(
+                        case["company_name"], case["question"], case["verified_findings"] or []
+                    )
+                    st.session_state["client_draft"] = draft
+                    audit.append_event(case["run_dir"], "CLIENT_DRAFT_GENERATED", {
+                        "model": draft.model, "source_findings": draft.source_findings,
+                    })
+                except ai_client.NoAPIKeyError as e:
+                    st.error(str(e))
+                except (client_communication.DraftSchemaError, ai_client.AICallError) as e:
+                    st.error(f"Draft failed, nothing was fabricated: {e}")
+
+            if st.session_state.get("client_draft"):
+                draft = st.session_state["client_draft"]
+                st.warning("DRAFT ONLY — not sent. Review before using anywhere.")
+                st.text_input("Subject", value=draft.subject, key="client_draft_subject")
+                st.text_area("Body", value=draft.body, height=180, key="client_draft_body")
+                st.caption(f"Drafted with {draft.model}, from verified findings only: {draft.source_findings}")
 
         st.divider()
         st.subheader("Audit log")
