@@ -243,6 +243,7 @@ if st.sidebar.button("Reset / New Case"):
     st.session_state.case_finance_company = None
     st.session_state.client_draft = None
     st.session_state.review_feedback = None
+    st.session_state.ai_call_feedback = None
     st.rerun()
 
 if case is not None:
@@ -638,19 +639,27 @@ elif page == "3. Findings & Recommendations":
                     case["verified_findings"] = verified
                     case["run"].mark_ai_draft_ready()
                     audit.append_event(case["run_dir"], "AI_CALL_SUCCESS", {"model": result.model, "raw_response": result.raw_json})
-                    st.success(f"AI draft generated using model `{result.model}`.")
+                    st.session_state["ai_call_feedback"] = ("success", f"AI draft generated using model `{result.model}`.")
                 except ai_client.NoAPIKeyError as e:
                     case["ai_status"] = "NO AI GENERATED — ANTHROPIC_API_KEY not set"
                     case["ai_error"] = str(e)
                     audit.append_event(case["run_dir"], "AI_CALL_NO_KEY", {"error": str(e)})
-                    st.error(str(e))
+                    st.session_state["ai_call_feedback"] = ("error", str(e))
                 except (ai_client.AIResponseSchemaError, ai_client.AICallError) as e:
                     case["ai_status"] = f"NO AI GENERATED — {e}"
                     case["ai_error"] = str(e)
                     audit.append_event(case["run_dir"], "AI_CALL_FAILED", {"error": str(e)})
-                    st.error(f"AI call failed, no content was fabricated: {e}")
+                    st.session_state["ai_call_feedback"] = ("error", f"AI call failed, no content was fabricated: {e}")
                 st.session_state.case = case
                 st.rerun()
+
+            # Same fix as Risks & Human Review: a message set right before st.rerun() never
+            # gets painted by the browser, so it's stashed and shown here on the next run.
+            ai_feedback = st.session_state.get("ai_call_feedback")
+            if ai_feedback:
+                kind, text = ai_feedback
+                (st.success if kind == "success" else st.error)(text)
+                st.session_state["ai_call_feedback"] = None
 
             if case["ai_status"] == "OK":
                 raw = case.get("ai_raw_json") or {}
