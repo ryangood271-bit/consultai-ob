@@ -34,8 +34,10 @@ before it's final."
   trend, and where every dollar of revenue actually goes."
 
 **1:40–2:30 — Findings & Recommendations (the real AI step)**
-- Show the ranked issues Python detected, each with its evidence.
-- Click "Call Anthropic API now" — let it load on camera.
+- Point at the headline "Top Issue" card, then the "Detected Issues" tab — each ranked issue
+  with its evidence.
+- Switch to the "AI Analysis & Recommendations" tab, click "Call Anthropic API now" — let it
+  load on camera (takes a few seconds, that's the real network call).
 - Scroll to the "Bottom line" section: "this is the AI's interpretation — what's going on,
   unconfirmed theories, and recommendations. Everything it says gets checked against the real
   numbers afterward — anything it can't back up gets flagged, not trusted."
@@ -45,17 +47,18 @@ before it's final."
   just a what-if calculator."
 
 **2:50–3:30 — Human-in-the-loop control (the actual point of the assignment)**
-- Go to Risks & Human Review. Fill in your name, role = "associate," decision = "approve,"
-  click submit. **Show the refusal** — "only a 'manager' role can approve; the system enforces
-  this in code."
+- Go to Risks & Human Review — point at the three green status cards (Blocking Errors /
+  Warnings / Unverified AI Claims). Fill in your name, role = "associate," decision = "approve,"
+  click submit. **Pause a beat for the page to refresh, then show the refusal** — "only a
+  'manager' role can approve; the system enforces this in code, not just on paper."
 - Change role to "manager," submit again — show it succeeding, state changes to
   APPROVED_INTERNAL.
 
 **3:30–3:50 — Output + the new "communicating with people" step**
-- Go to Briefing & Audit Trail. Download the PDF briefly on camera.
-- Scroll to "Draft a client-facing summary" — now unlocked because the run is approved. Click
-  "Draft client email," show the generated draft. "This only works after approval, only uses
-  verified findings, and there's no send button anywhere — I'd copy this into my own email."
+- Go to Briefing & Audit Trail — the "📋 Briefing" tab, download the PDF briefly on camera.
+- Click the "✉️ Client Email" tab — now unlocked because the run is approved. Click "Draft
+  client email," show the generated draft. "This only works after approval, only uses verified
+  findings, and there's no send button anywhere — I'd copy this into my own email."
 
 **3:50–4:30 — The difficult/adversarial case**
 - Click "Reset / New Case."
