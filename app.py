@@ -242,6 +242,7 @@ if st.sidebar.button("Reset / New Case"):
     st.session_state.case_finance_notes = []
     st.session_state.case_finance_company = None
     st.session_state.client_draft = None
+    st.session_state.review_feedback = None
     st.rerun()
 
 if case is not None:
@@ -820,7 +821,7 @@ elif page == "5. Risks & Human Review":
 
         if submit_clicked:
             if not reviewer_name or not reason:
-                st.error("Reviewer name and reason are required.")
+                st.session_state["review_feedback"] = ("error", "Reviewer name and reason are required.")
             else:
                 decision = ReviewDecision(reviewer_name, reviewer_role, decision_type, reason)
                 try:
@@ -829,12 +830,22 @@ elif page == "5. Risks & Human Review":
                         "reviewer_name": reviewer_name, "reviewer_role": reviewer_role,
                         "decision": decision_type, "reason": reason, "resulting_state": run.state.value,
                     })
-                    st.success(f"Decision recorded. Run state is now {run.state.value}.")
+                    st.session_state["review_feedback"] = ("success", f"Decision recorded. Run state is now {run.state.value}.")
                 except IllegalTransitionError as e:
                     audit.append_event(case["run_dir"], "REVIEW_DECISION_REJECTED_BY_SYSTEM", {"error": str(e)})
-                    st.error(f"Blocked by system rule: {e}")
+                    st.session_state["review_feedback"] = ("error", f"Blocked by system rule: {e}")
                 st.session_state.case = case
                 st.rerun()
+
+        # Shown on the rerun that follows a submit — a message set, then immediately followed
+        # by st.rerun() in the same run, never actually gets painted by the browser (the forced
+        # rerun outraces it), so the feedback must be stashed in session_state and rendered here
+        # instead, on the NEXT run, where it will actually be visible.
+        feedback = st.session_state.get("review_feedback")
+        if feedback:
+            kind, text = feedback
+            (st.success if kind == "success" else st.error)(text)
+            st.session_state["review_feedback"] = None
 
 # ---------------------------------------------------------------------------
 # PAGE 6 — BRIEFING & AUDIT TRAIL
